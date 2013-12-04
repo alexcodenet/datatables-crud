@@ -1,0 +1,148 @@
+<a data-toggle="modal" style="margin-left: 75%;" href="#insert-modal">New record</a>
+
+<table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="example"></table>
+
+<div class="modal" style="display: none;" id="insert-modal" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-header">
+        <button class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 id="myModalLabel">Insert new row</h4>
+    </div>
+    <div class="modal-body" style="text-align: center;">
+        <label for="fname">#first name</label><input type="text" id="fname" maxlength="128" />
+        <label for="lname">#last name</label><input type="text" id="lname" maxlength="128" />
+        <br>
+        <input type="submit" class="btn btn-large btn-primary" value="Insert" onclick="newRecord(fname.value, lname.value)" />
+    </div>
+    <div class="modal-footer" style="text-align: left;"></div>
+</div>
+
+
+<script>
+
+$(document).ready(function() {
+	$('#example').dataTable( {
+		"sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+		"sPaginationType": "bootstrap",
+                "bServerSide": true,
+                "sAjaxSource": "index/dt",
+                "aoColumns": 
+                [
+                        { "sTitle": "Id", "sWidth": "4%" },
+			{ "sTitle": "#", "sWidth": "8%" },
+                        { "sTitle": "#", "sWidth": "8%" },
+			{ "sTitle": "First Name" },
+			{ "sTitle": "Last Name"}
+                ]
+		
+	} );
+} );
+
+$(document).ready(function() {
+    var oTable = $('#example').dataTable();
+    var nEditing = null;
+     
+    $('#example').on('click', 'a.edit', function (e) {
+        e.preventDefault();
+       
+        /* Get the row as a parent of the link that was clicked on */
+        var nRow = $(this).parents('tr')[0];
+         
+        if ( nEditing !== null && nEditing != nRow ) {
+            /* A different row is being edited - the edit should be cancelled and this row edited */
+            restoreRow( oTable, nEditing );
+            editRow( oTable, nRow );
+            nEditing = nRow;
+        }
+        else if ( nEditing == nRow && this.innerHTML == "Save" ) {
+            /* This row is being edited and should be saved */
+            saveRow( oTable, nEditing );
+            nEditing = null;
+        }
+        else {
+            /* No row currently being edited */
+            editRow( oTable, nRow );
+            nEditing = nRow;
+        }
+    } );
+} );
+
+function editRow ( oTable, nRow )
+{
+    var aData = oTable.fnGetData(nRow);
+    var jqTds = $('>td', nRow);
+    jqTds[0].innerHTML = '<input value="'+aData[0]+'" type="text" readonly>';
+    jqTds[3].innerHTML = '<input value="'+aData[3]+'" type="text">';
+    jqTds[4].innerHTML = '<input value="'+aData[4]+'" type="text">';
+    jqTds[1].innerHTML = '<a class="edit" href="">Save</a>';
+}
+
+function saveRow ( oTable, nRow )
+{
+    var jqInputs = $('input', nRow);
+    
+    var id = jqInputs[0].value;
+    var fname = jqInputs[1].value;
+    var lname = jqInputs[2].value;
+    
+    editRecord(id, fname, lname);
+    
+    oTable.fnUpdate( jqInputs[1].value, nRow, 1, false );
+    oTable.fnUpdate( jqInputs[2].value, nRow, 2, false );
+    oTable.fnDraw();
+}
+
+function newRecord(fname, lname)
+{
+    $.ajax({
+        type: "GET",
+        url: "/index/new/",
+        data: 
+        {
+            fname: fname,
+            lname: lname
+        },
+        success: function() {
+            $('#insert-modal').modal('hide');
+            $('#example').dataTable().fnDraw();
+            
+        }
+    });
+}
+
+function editRecord(id, fname, lname)
+{
+    $.ajax({
+        type: "GET",
+        url: "index/edit",
+        data: 
+        {
+            id: id,
+            fname: fname,
+            lname: lname
+        },
+        success: function() {
+            
+        }
+    });
+}
+
+function deleteRecord(id)
+{
+    $.ajax({
+        type: "GET",
+        url: "index/delete",
+        data: 
+        {
+            id: id
+        },
+        success: function() {
+            $('#example').dataTable().fnDraw();
+        }
+    });
+}
+
+$('#insert-modal').on('hidden', function () {
+      $('#fname').val("");
+      $('#lname').val("");
+ });
+</script>
